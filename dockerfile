@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        docker { image 'docker:stable' }
-    }
+    agent any
     environment {
         DOCKER_IMAGE = "python-web"
         REPO_URL = "https://github.com/cybe44oot/python-web.git"
@@ -14,22 +12,17 @@ pipeline {
         }
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh 'docker build -t ${DOCKER_IMAGE} .'
-                }
+                bat 'docker build -t ${DOCKER_IMAGE} .'
             }
         }
         stage('Run Container') {
             steps {
-                script {
-                    // Stop and remove existing container if running
-                    sh '''
-                    docker ps -q --filter "name=${DOCKER_IMAGE}" | grep -q . && docker stop ${DOCKER_IMAGE} || true
-                    docker rm ${DOCKER_IMAGE} || true
-                    '''
-                    // Run the container
-                    sh 'docker run -d --name ${DOCKER_IMAGE} -p 9090:9090 ${DOCKER_IMAGE}'
-                }
+                bat '''
+                REM Stop and remove existing container if running
+                docker ps -q --filter "name=${DOCKER_IMAGE}" | findstr . && docker stop ${DOCKER_IMAGE} || echo No running container found.
+                docker rm ${DOCKER_IMAGE} || echo No container to remove.
+                '''
+                bat 'docker run -d --name ${DOCKER_IMAGE} -p 9090:9090 ${DOCKER_IMAGE}'
             }
         }
     }
