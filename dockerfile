@@ -1,17 +1,44 @@
-# Use Python base image
-FROM python:3.9-slim
-
-# Set the working directory
-WORKDIR /app
-
-# Copy the app files to the container
-COPY . /app
-
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Expose the port
-EXPOSE 9090
-
-# Run the application
-CMD ["python", "app.py"]
+pipeline {
+    agent {
+        docker { image 'docker:stable' }
+    }
+    environment {
+        DOCKER_IMAGE = "python-web"
+        REPO_URL = "https://github.com/cybe44oot/python-web.git"
+    }
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: "${REPO_URL}"
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh 'docker build -t ${DOCKER_IMAGE} .'
+                }
+            }
+        }
+        stage('Run Container') {
+            steps {
+                script {
+                    // Stop and remove existing container if running
+                    sh '''
+                    docker ps -q --filter "name=${DOCKER_IMAGE}" | grep -q . && docker stop ${DOCKER_IMAGE} || true
+                    docker rm ${DOCKER_IMAGE} || true
+                    '''
+                    // Run the container
+                    sh 'docker run -d --name ${DOCKER_IMAGE} -p 9090:9090 ${DOCKER_IMAGE}'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo "Application deployed successfully!"
+        }
+        failure {
+            echo "Build or deployment failed!"
+        }
+    }
+}
